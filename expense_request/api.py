@@ -74,6 +74,7 @@ def setup(expense_entry, method):
     count = 0
     expense_items = []
 
+    print(expense_entry)
     
     for detail in expense_entry.expenses:
         total += float(detail.amount)        
@@ -84,6 +85,12 @@ def setup(expense_entry, method):
         
         if not detail.cost_center and expense_entry.default_cost_center:
             detail.cost_center = expense_entry.default_cost_center
+
+        if not detail.branch and expense_entry.branch:
+            detail.branch = expense_entry.branch
+
+        if not detail.route and expense_entry.route:
+            detail.route = expense_entry.route
 
         expense_items.append(detail)
 
@@ -108,10 +115,10 @@ def initialise_journal_entry(expense_entry_name):
 
 def make_journal_entry(expense_entry):
 
-    if expense_entry.status == "Approved":         
+    if expense_entry.status == "Approved":
 
         # check for duplicates
-        
+
         if frappe.db.exists({'doctype': 'Journal Entry', 'bill_no': expense_entry.name}):
             frappe.throw(
                 title="Error",
@@ -122,22 +129,21 @@ def make_journal_entry(expense_entry):
         # Preparing the JE: convert expense_entry details into je account details
 
         accounts = []
-
-        for detail in expense_entry.expenses:            
-
-            accounts.append({  
+        for detail in expense_entry.expenses:
+            accounts.append({
                 'debit_in_account_currency': float(detail.amount),
                 'user_remark': str(detail.description),
                 'account': detail.expense_account,
                 'project': detail.project,
-                'cost_center': detail.cost_center
+                'cost_center': detail.cost_center,
+                'branch': detail.branch,
+                'route': detail.route
             })
 
         # finally add the payment account detail
-
         pay_account = ""
 
-        if (expense_entry.mode_of_payment != "Cash" and (not 
+        if (expense_entry.mode_of_payment != "Cash" and (not
             expense_entry.payment_reference or not expense_entry.clearance_date)):
             frappe.throw(
                 title="Enter Payment Reference",
@@ -147,7 +153,6 @@ def make_journal_entry(expense_entry):
             expense_entry.clearance_date = ""
             expense_entry.payment_reference = ""
 
-
         pay_account = frappe.db.get_value('Mode of Payment Account', {'parent' : expense_entry.mode_of_payment, 'company' : expense_entry.company}, 'default_account')
         if not pay_account or pay_account == "":
             frappe.throw(
@@ -155,11 +160,13 @@ def make_journal_entry(expense_entry):
                 msg="The selected Mode of Payment has no linked account."
             )
 
-        accounts.append({  
+        accounts.append({
             'credit_in_account_currency': float(expense_entry.total),
             'user_remark': str(detail.description),
             'account': pay_account,
-            'cost_center': expense_entry.default_cost_center
+            'cost_center': expense_entry.default_cost_center,
+            'branch': expense_entry.branch,
+            'route': expense_entry.route
         })
 
         # create the journal entry
@@ -183,7 +190,6 @@ def make_journal_entry(expense_entry):
 
         full_name = str(user.first_name) + ' ' + str(user.last_name)
         expense_entry.db_set('approved_by', full_name)
-        
 
         je.insert()
         je.submit()
