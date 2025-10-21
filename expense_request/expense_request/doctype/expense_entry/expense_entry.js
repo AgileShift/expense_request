@@ -45,17 +45,12 @@ frappe.ui.form.on('Expense Entry', {
     before_save: function(frm) { 
 
         $.each(frm.doc.expenses, function(i, d) { 
-            let label = "";
-            
-            if((d.cost_center === "" || typeof d.cost_center == 'undefined')) { 
-                
-                if (cur_frm.doc.default_cost_center === "" || typeof cur_frm.doc.default_cost_center == 'undefined') {
+            if((d.cost_center === "" || typeof d.cost_center == 'undefined')) {
+                if (frm.doc.default_cost_center === "" || typeof cur_frm.doc.default_cost_center == 'undefined') {
                     frappe.validated = false;
-                    frappe.msgprint("Set a Default Cost Center or specify the Cost Center for expense <strong>No. " 
-                                    + (i + 1) + "</strong>.");
+                    frappe.msgprint("Set a Default Cost Center or specify the Cost Center for expense <strong>No. " + (i + 1) + "</strong>.");
                     return false;
-                }
-                else {
+                } else {
                     d.cost_center = cur_frm.doc.default_cost_center; 
                 }
             }
@@ -79,7 +74,7 @@ function set_queries(frm) {
     frm.set_query("expense_account", 'expenses', () => {
         return {
             filters: [
-                ["Account", "root_type", "in", ["Expense", "Liability"]],
+                ["Account", "root_type", "in", ["Expense", "Liability", "Asset"]],
                 ["Account", "is_group", "=", "0"],
                 ["Account", "company", "=", frm.doc.company]
             ]
